@@ -6,6 +6,7 @@ import {
   GAME_CONTAINER_HEIGHT,
   GAME_TILES_WIDE,
   GAME_TILES_TALL,
+  GAME_START_FRAME_SPEED,
 } from "./constants";
 import { Cell } from "./Cell";
 import { useInterval } from "./useInterval";
@@ -26,16 +27,15 @@ const getTile = (name) => {
 };
 
 const getPreviousDirection = (imgPath) => {
-  if (imgPath === getTile("up")) return "up";
-  if (imgPath === getTile("down")) return "down";
-  if (imgPath === getTile("left")) return "left";
-  if (imgPath === getTile("right")) return "right";
+  if (imgPath === getTile("headup")) return "up";
+  if (imgPath === getTile("headdown")) return "down";
+  if (imgPath === getTile("headleft")) return "left";
+  if (imgPath === getTile("headright")) return "right";
 };
 
 const canSnakeMove = (cells, newX, newY) => {
   const targetCell = cells.find((cell) => cell.x === newX && cell.y === newY);
   if (!targetCell) return;
-  console.log("target cell", targetCell);
   return (
     targetCell.snakeSegment === 0 &&
     newX < GAME_TILES_WIDE + 1 &&
@@ -77,18 +77,6 @@ const moveSnake = (cells, newX, newY, direction, snakeLength) => {
   return cells.map((cell) => {
     const isNewHead = cell.x === newX && cell.y === newY;
     const wasOldHead = cell.img.includes("head");
-    console.log(
-      "dir",
-      direction,
-      "cell img was",
-      cell.img,
-      "now",
-      wasOldHead
-        ? getNewBodyImage(getPreviousDirection(cell.img), direction)
-        : isNewHead
-        ? getTile(`head${direction}`)
-        : cell.img
-    );
     return {
       ...cell,
       snakeSegment: isNewHead
@@ -136,7 +124,7 @@ export const GameGrid = () => {
     x: GAME_TILES_WIDE / 2,
     y: GAME_TILES_TALL / 2,
   });
-  const [frameDuration, setFrameDuration] = useState(5000);
+  const [frameDuration, setFrameDuration] = useState(GAME_START_FRAME_SPEED);
 
   const frame = () => {
     if (!gameRunning) return;
@@ -168,7 +156,6 @@ export const GameGrid = () => {
       setSnakePos({ x: newX, y: newY });
       setSnakeDirection(direction);
       const newCells = moveSnake(cells, newX, newY, direction);
-      //console.log("cells was", cells, "now", newCells);
       setCells(newCells);
     }
   };
@@ -186,6 +173,7 @@ export const GameGrid = () => {
       </div>
       <div className={styles.gameContainer}>
         {cells.map((cell) => {
+          if (cell.img !== "") console.log("cell", cell);
           return (
             <Cell
               key={`${cell.x},${cell.y}`}

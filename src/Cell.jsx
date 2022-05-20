@@ -20,8 +20,8 @@ export const Cell = ({ x, y, imageUrl }) => {
   return (
     <div
       style={{
-        top: `${xPos}px`,
-        left: `${yPos}px`,
+        top: `${yPos}px`,
+        left: `${xPos}px`,
         backgroundImage: `url(${imageUrl})`,
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
