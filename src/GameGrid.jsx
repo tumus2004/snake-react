@@ -149,7 +149,7 @@ export const GameGrid = () => {
     if (!cells.length) return;
 
     if (!canSnakeMove(cells, newX, newY)) {
-      console.log("snake crashed!");
+      alert("snake crashed!");
       setGameRunning(false);
     } else {
       console.log("pos was", snakePos, "now", newX, newY);
