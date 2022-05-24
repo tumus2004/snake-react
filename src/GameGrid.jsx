@@ -7,6 +7,7 @@ import {
   GAME_TILES_WIDE,
   GAME_TILES_TALL,
   GAME_START_FRAME_SPEED,
+  SNAKE_START_LENGTH,
 } from "./constants";
 import { Cell } from "./Cell";
 import { useInterval } from "./useInterval";
@@ -14,23 +15,57 @@ import { useInterval } from "./useInterval";
 const useStyles = makeStyles({
   gameContainer: {
     color: "black",
-    backgroundColor: "black",
+    backgroundColor: "white",
     width: `${GAME_CONTAINER_WIDTH}px`,
     height: `${GAME_CONTAINER_HEIGHT}px`,
     position: "relative",
-    border: "1px solid white",
+    //border: "1px solid white",
+    "& > :nth-child(even)": {
+      background: "rgba(0,0,0,0.1)",
+    },
+  },
+  controls: {
+    fontWeight: "bold",
+  },
+  controlsButtons: {
+    color: "#eb34d8",
+  },
+  gameStatus: {
+    color: "#ff860d",
   },
 });
+
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
 const getTile = (name) => {
   return `tiles/${name}.png`;
 };
 
-const getPreviousDirection = (imgPath) => {
-  if (imgPath === getTile("headup")) return "up";
-  if (imgPath === getTile("headdown")) return "down";
-  if (imgPath === getTile("headleft")) return "left";
-  if (imgPath === getTile("headright")) return "right";
+const willEatApple = (cells, newX, newY) => {
+  return cells.reduce((acc, cell) => {
+    if (cell.x === newX && cell.y === newY && cell.isApple) acc = true;
+    return acc;
+  }, false);
+};
+
+const getCellsWithNewApple = (cells) => {
+  const availableCells = cells.filter((cell) => cell.snakeSegment === 0);
+  const newAppleCellIndex = getRandomInt(0, availableCells.length);
+  const newAppleCell = availableCells[newAppleCellIndex];
+  return cells.map((cell) => {
+    if (cell.x === newAppleCell.x && cell.y === newAppleCell.y) {
+      return { ...cell, isApple: true, img: getTile("apple") };
+    }
+    return {
+      ...cell,
+      isApple: false,
+      img: cell.img === getTile("apple") ? "" : cell.img,
+    };
+  });
 };
 
 const canSnakeMove = (cells, newX, newY) => {
@@ -45,51 +80,60 @@ const canSnakeMove = (cells, newX, newY) => {
   );
 };
 
-const getNewBodyImage = (previousDirection, direction) => {
-  if (previousDirection === "up" && direction === "right")
+const getNewBodyImage = (enterDirection, exitDirection) => {
+  if (enterDirection === "up" && exitDirection === "right")
     return getTile("cornerBR");
-  if (previousDirection === "down" && direction === "right")
+  if (enterDirection === "down" && exitDirection === "right")
     return getTile("cornerTR");
-  if (previousDirection === "up" && direction === "left")
+  if (enterDirection === "up" && exitDirection === "left")
     return getTile("cornerBL");
-  if (previousDirection === "down" && direction === "left")
+  if (enterDirection === "down" && exitDirection === "left")
     return getTile("cornerTL");
-  if (previousDirection === "up" && direction === "up")
+  if (enterDirection === "up" && exitDirection === "up")
     return getTile("vertical");
-  if (previousDirection === "down" && direction === "down")
+  if (enterDirection === "down" && exitDirection === "down")
     return getTile("vertical");
 
-  if (previousDirection === "left" && direction === "up")
+  if (enterDirection === "left" && exitDirection === "up")
     return getTile("cornerTR");
-  if (previousDirection === "right" && direction === "up")
+  if (enterDirection === "right" && exitDirection === "up")
     return getTile("cornerTL");
-  if (previousDirection === "left" && direction === "down")
+  if (enterDirection === "left" && exitDirection === "down")
     return getTile("cornerBR");
-  if (previousDirection === "right" && direction === "down")
+  if (enterDirection === "right" && exitDirection === "down")
     return getTile("cornerBL");
-  if (previousDirection === "left" && direction === "left")
+  if (enterDirection === "left" && exitDirection === "left")
     return getTile("horizontal");
-  if (previousDirection === "right" && direction === "right")
+  if (enterDirection === "right" && exitDirection === "right")
     return getTile("horizontal");
 };
 
 const moveSnake = (cells, newX, newY, direction, snakeLength) => {
   return cells.map((cell) => {
     const isNewHead = cell.x === newX && cell.y === newY;
-    const wasOldHead = cell.img.includes("head");
+    const wasHead = cell.snakeSegment === 1;
+    let newSnakeSegment = isNewHead
+      ? 1
+      : cell.snakeSegment === 0
+      ? 0
+      : cell.snakeSegment + 1;
+    if (newSnakeSegment > snakeLength) newSnakeSegment = 0;
+    const isTail = newSnakeSegment === snakeLength;
     return {
       ...cell,
-      snakeSegment: isNewHead
-        ? 1
-        : cell.snakeSegment === 0
-        ? 0
-        : cell.snakeSegment + 1 > snakeLength
-        ? 0
-        : cell.snakeSegment + 1,
-      img: wasOldHead
-        ? getNewBodyImage(getPreviousDirection(cell.img), direction)
+      enterDirection: isNewHead ? direction : cell.enterDirection,
+      exitDirection: wasHead ? direction : cell.exitDirection,
+      snakeSegment: newSnakeSegment,
+      img: wasHead
+        ? getNewBodyImage(cell.enterDirection, direction)
         : isNewHead
         ? getTile(`head${direction}`)
+        : isTail
+        ? getTile(`tail${cell.exitDirection}`)
+        : cell.isApple
+        ? getTile("apple")
+        : newSnakeSegment === 0
+        ? ""
         : cell.img,
     };
   });
@@ -99,11 +143,30 @@ let cellsStructure = [];
 for (let x = 1; x <= GAME_TILES_WIDE; x++) {
   for (let y = 1; y <= GAME_TILES_TALL; y++) {
     let img = "";
-    if (x === GAME_TILES_WIDE / 2 && y === GAME_TILES_TALL / 2)
-      img = getTile("headright");
-    cellsStructure.push({ x, y, img, snakeSegment: 0 });
+    let snakeSegment = 0;
+    for (let i = 0; i < SNAKE_START_LENGTH; i++) {
+      if (
+        x === Math.round(GAME_TILES_WIDE / 2) - i &&
+        y === Math.round(GAME_TILES_TALL / 2)
+      ) {
+        img = getTile("horizontal");
+        if (i === SNAKE_START_LENGTH - 1) img = getTile(`tailright`);
+        if (i === 0) img = getTile("headright");
+        snakeSegment = i + 1;
+      }
+    }
+    cellsStructure.push({
+      x,
+      y,
+      img,
+      snakeSegment,
+      enterDirection: "right",
+      exitDirection: "right",
+      isApple: false,
+    });
   }
 }
+const initialCells = getCellsWithNewApple(cellsStructure);
 
 const keysDefault = {
   ArrowUp: false,
@@ -115,14 +178,17 @@ const keysDefault = {
 
 export const GameGrid = () => {
   const styles = useStyles();
-  const [cells, setCells] = useState(cellsStructure);
+  const [cells, setCells] = useState(initialCells);
   const [gameRunning, setGameRunning] = useState(true);
   const [isGamePaused, setGamePaused] = useState(false);
-  const [snakeLength, setSnakeLength] = useState(3);
+  const [snakeCrashed, setSnakeCrashed] = useState(false);
+  const [score, setScore] = useState(0);
+  const [scoreCount, setScoreCount] = useState(0);
+  const [snakeLength, setSnakeLength] = useState(SNAKE_START_LENGTH);
   const [snakeDirection, setSnakeDirection] = useState("right");
   const [snakePos, setSnakePos] = useState({
-    x: GAME_TILES_WIDE / 2,
-    y: GAME_TILES_TALL / 2,
+    x: Math.round(GAME_TILES_WIDE / 2),
+    y: Math.round(GAME_TILES_TALL / 2),
   });
   const [frameDuration, setFrameDuration] = useState(GAME_START_FRAME_SPEED);
 
@@ -151,11 +217,24 @@ export const GameGrid = () => {
     if (!canSnakeMove(cells, newX, newY)) {
       console.log("snake crashed!");
       setGameRunning(false);
+      setSnakeCrashed(true);
     } else {
-      console.log("pos was", snakePos, "now", newX, newY);
       setSnakePos({ x: newX, y: newY });
       setSnakeDirection(direction);
-      const newCells = moveSnake(cells, newX, newY, direction);
+      let newCells = moveSnake(cells, newX, newY, direction, snakeLength);
+      if (willEatApple(cells, newX, newY)) {
+        setScore(score + 5);
+        if (scoreCount > 4) {
+          setScoreCount(0);
+          if (frameDuration > 100) {
+            setFrameDuration(frameDuration - 25);
+          }
+        } else {
+          setScoreCount(scoreCount + 1);
+        }
+        setSnakeLength(snakeLength + 1);
+        newCells = getCellsWithNewApple(newCells);
+      }
       setCells(newCells);
     }
   };
@@ -163,17 +242,33 @@ export const GameGrid = () => {
   useInterval(frame, gameRunning ? frameDuration : null);
 
   useEffect(() => {
-    //consoleBranding();
+    consoleBranding();
   }, []);
 
   return (
     <>
-      <div>
-        Snake Pos{snakePos.x} {snakePos.y} Snake Dir {snakeDirection}
+      <div style={{ color: "white" }}>
+        <img src="./logo.png" alt="Snake Logo" />
+        <p>
+          <span className={styles.controls}>
+            [<span className={styles.controlsButtons}>SPACE</span>] Pause [
+            <span className={styles.controlsButtons}>↑↓←→</span>] Move Snake [
+            <span className={styles.controlsButtons}>CTRL+R</span>] Restart Game
+          </span>
+        </p>
+        <h3 className={styles.gameStatus}>
+          {snakeCrashed && `GAME OVER! Your score was: ${score}`}
+          {!isGamePaused && !snakeCrashed && `Points: ${score}`}
+          {!snakeCrashed && isGamePaused && "PAUSED"}
+        </h3>
       </div>
-      <div className={styles.gameContainer}>
+      <div
+        className={styles.gameContainer}
+        style={{
+          backgroundColor: snakeCrashed ? "orange" : "green",
+        }}
+      >
         {cells.map((cell) => {
-          if (cell.img !== "") console.log("cell", cell);
           return (
             <Cell
               key={`${cell.x},${cell.y}`}
@@ -184,6 +279,9 @@ export const GameGrid = () => {
           );
         })}
       </div>
+      {/* <div style={{ color: "white" }}>
+        Snake Pos {snakePos.x} {snakePos.y} Snake Dir {snakeDirection}
+      </div> */}
     </>
   );
 };
