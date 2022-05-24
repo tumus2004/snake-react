@@ -13,6 +13,12 @@ import { Cell } from "./Cell";
 import { useInterval } from "./useInterval";
 
 const useStyles = makeStyles({
+  gameTitle: {
+    fontFamily: "Supermercado One",
+    color: "lime",
+    fontSize: "5rem",
+    margin: 0,
+  },
   gameContainer: {
     color: "black",
     backgroundColor: "white",
@@ -248,7 +254,7 @@ export const GameGrid = () => {
   return (
     <>
       <div style={{ color: "white" }}>
-        <img src="./logo.png" alt="Snake Logo" />
+        <h1 className={styles.gameTitle}>SNAKE</h1>
         <p>
           <span className={styles.controls}>
             [<span className={styles.controlsButtons}>SPACE</span>] Pause [
