@@ -88,26 +88,26 @@ const canSnakeMove = (cells, newX, newY) => {
 
 const getNewBodyImage = (enterDirection, exitDirection) => {
   if (enterDirection === "up" && exitDirection === "right")
-    return getTile("cornerBR");
+    return getTile("cornerbr");
   if (enterDirection === "down" && exitDirection === "right")
-    return getTile("cornerTR");
+    return getTile("cornertr");
   if (enterDirection === "up" && exitDirection === "left")
-    return getTile("cornerBL");
+    return getTile("cornerbl");
   if (enterDirection === "down" && exitDirection === "left")
-    return getTile("cornerTL");
+    return getTile("cornertl");
   if (enterDirection === "up" && exitDirection === "up")
     return getTile("vertical");
   if (enterDirection === "down" && exitDirection === "down")
     return getTile("vertical");
 
   if (enterDirection === "left" && exitDirection === "up")
-    return getTile("cornerTR");
+    return getTile("cornertr");
   if (enterDirection === "right" && exitDirection === "up")
-    return getTile("cornerTL");
+    return getTile("cornertl");
   if (enterDirection === "left" && exitDirection === "down")
-    return getTile("cornerBR");
+    return getTile("cornerbr");
   if (enterDirection === "right" && exitDirection === "down")
-    return getTile("cornerBL");
+    return getTile("cornerbl");
   if (enterDirection === "left" && exitDirection === "left")
     return getTile("horizontal");
   if (enterDirection === "right" && exitDirection === "right")
