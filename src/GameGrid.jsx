@@ -1,9 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { makeStyles } from "@material-ui/core";
+import { useEffect, useState } from "react";
+
 import { consoleBranding } from "./console";
 import {
-  GAME_CONTAINER_WIDTH,
-  GAME_CONTAINER_HEIGHT,
   GAME_TILES_WIDE,
   GAME_TILES_TALL,
   GAME_START_FRAME_SPEED,
@@ -11,35 +9,9 @@ import {
 } from "./constants";
 import { Cell } from "./Cell";
 import { useInterval } from "./useInterval";
-
-const useStyles = makeStyles({
-  gameTitle: {
-    fontFamily: "Supermercado One",
-    color: "lime",
-    fontSize: "5rem",
-    margin: 0,
-  },
-  gameContainer: {
-    color: "black",
-    backgroundColor: "white",
-    width: `${GAME_CONTAINER_WIDTH}px`,
-    height: `${GAME_CONTAINER_HEIGHT}px`,
-    position: "relative",
-    //border: "1px solid white",
-    "& > :nth-child(even)": {
-      background: "rgba(0,0,0,0.1)",
-    },
-  },
-  controls: {
-    fontWeight: "bold",
-  },
-  controlsButtons: {
-    color: "#eb34d8",
-  },
-  gameStatus: {
-    color: "#ff860d",
-  },
-});
+import { useStyles } from "./GameGrid.styles";
+import Confetti from "react-confetti";
+import axios from "axios";
 
 function getRandomInt(min, max) {
   min = Math.ceil(min);
@@ -192,11 +164,29 @@ export const GameGrid = () => {
   const [scoreCount, setScoreCount] = useState(0);
   const [snakeLength, setSnakeLength] = useState(SNAKE_START_LENGTH);
   const [snakeDirection, setSnakeDirection] = useState("right");
+  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [yourName, setYourName] = useState("");
   const [snakePos, setSnakePos] = useState({
     x: Math.round(GAME_TILES_WIDE / 2),
     y: Math.round(GAME_TILES_TALL / 2),
   });
   const [frameDuration, setFrameDuration] = useState(GAME_START_FRAME_SPEED);
+
+  const highScores = window.highScores || {
+    first: {
+      name: "Dev Mode",
+      score: 100,
+    },
+    second: {
+      name: "Dev Mode",
+      score: 100,
+    },
+    third: {
+      name: "Dev Mode",
+      score: 50,
+    },
+  };
+  const pageVisits = window.pageVisits || "dev mode";
 
   const frame = () => {
     if (!gameRunning) return;
@@ -251,11 +241,54 @@ export const GameGrid = () => {
     consoleBranding();
   }, []);
 
+  const place = () => {
+    let place = "none";
+    if (score >= highScores.third.score) place = "third";
+    if (score >= highScores.second.score) place = "second";
+    if (score >= highScores.first.score) place = "first";
+    return place;
+  };
+
+  const setName = (e) => {
+    setYourName(e.target.value.replace(/[^a-z]/gi, ""));
+  };
+
+  const saveName = async () => {
+    setFormSubmitted(true);
+    const data = { newScore: score, name: yourName };
+    const responseJson = await axios({
+      method: "POST",
+      url: "https://noobs.wtf/snake/highScores.php",
+      data,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      responseType: "json",
+    });
+    console.log("response", responseJson);
+  };
+
   return (
     <>
-      <div style={{ color: "white" }}>
-        <h1 className={styles.gameTitle}>SNAKE</h1>
-        <p>
+      <div className={styles.header} style={{ color: "white" }}>
+        {snakeCrashed && place() !== "none" && <Confetti />}
+        {highScores && (
+          <div className={styles.highScoresContainer}>
+            <h3>High Scores</h3>
+            <p>
+              1st: {highScores.first.name}, {highScores.first.score}
+            </p>
+            <p>
+              2nd: {highScores.second.name}, {highScores.second.score}
+            </p>
+            <p>
+              3rd: {highScores.third.name}, {highScores.third.score}
+            </p>
+            <p className={styles.pageVisits}>Page visits: {pageVisits}</p>
+          </div>
+        )}
+        <img className={styles.gameTitleImg} src="logo.png" alt="SNAKE" />
+        <p className={styles.controlsText}>
           <span className={styles.controls}>
             [<span className={styles.controlsButtons}>SPACE</span>] Pause [
             <span className={styles.controlsButtons}>↑↓←→</span>] Move Snake [
@@ -263,31 +296,69 @@ export const GameGrid = () => {
           </span>
         </p>
         <h3 className={styles.gameStatus}>
-          {snakeCrashed && `GAME OVER! Your score was: ${score}`}
           {!isGamePaused && !snakeCrashed && `Points: ${score}`}
           {!snakeCrashed && isGamePaused && "PAUSED"}
         </h3>
       </div>
-      <div
-        className={styles.gameContainer}
-        style={{
-          backgroundColor: snakeCrashed ? "orange" : "green",
-        }}
-      >
-        {cells.map((cell) => {
-          return (
-            <Cell
-              key={`${cell.x},${cell.y}`}
-              x={cell.x}
-              y={cell.y}
-              imageUrl={cell.img}
-            />
-          );
-        })}
+      <div className={styles.gameContainerWrapper}>
+        <div
+          className={styles.gameContainer}
+          style={{
+            backgroundColor: snakeCrashed ? "orange" : "green",
+          }}
+        >
+          {snakeCrashed && (
+            <div className={styles.endGameModalContainer}>
+              <div className={styles.endGameModal}>
+                <h3 className={styles.gameStatus}>
+                  GAME OVER! Your score was: {score}
+                </h3>
+                {place() !== "none" && (
+                  <div>
+                    <h3 className={styles.congratulations}>Congratulations!</h3>
+                    <p>You've taken {place()} place on the wall of fame!</p>
+                  </div>
+                )}
+                {place() === "none" && (
+                  <div>
+                    <h3>Wall of Fame</h3>
+                    <p>
+                      1st: {highScores.first.name} {highScores.first.score}
+                    </p>
+                    <p>
+                      2nd: {highScores.second.name} {highScores.second.score}
+                    </p>
+                    <p>
+                      3rd: {highScores.third.name} {highScores.third.score}
+                    </p>
+                  </div>
+                )}
+                {place() !== "none" && !formSubmitted && (
+                  <>
+                    <input
+                      onChange={setName}
+                      value={yourName}
+                      placeholder="your name"
+                    ></input>
+                    <button onClick={saveName}>Submit</button>
+                  </>
+                )}
+                {formSubmitted && <p>Saved!</p>}
+              </div>
+            </div>
+          )}
+          {cells.map((cell) => {
+            return (
+              <Cell
+                key={`${cell.x},${cell.y}`}
+                x={cell.x}
+                y={cell.y}
+                imageUrl={cell.img}
+              />
+            );
+          })}
+        </div>
       </div>
-      {/* <div style={{ color: "white" }}>
-        Snake Pos {snakePos.x} {snakePos.y} Snake Dir {snakeDirection}
-      </div> */}
     </>
   );
 };
