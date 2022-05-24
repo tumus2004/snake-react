@@ -1,7 +1,8 @@
-export const GAME_CONTAINER_WIDTH = 600;
-export const GAME_CONTAINER_HEIGHT = 600;
-export const GAME_TILES_WIDE = 10;
-export const GAME_TILES_TALL = 10;
+export const GAME_CONTAINER_WIDTH = 800;
+export const GAME_CONTAINER_HEIGHT = 800;
+export const GAME_TILES_WIDE = 20;
+export const GAME_TILES_TALL = 19;
 export const CELL_WIDTH = GAME_CONTAINER_WIDTH / GAME_TILES_WIDE;
 export const CELL_HEIGHT = GAME_CONTAINER_HEIGHT / GAME_TILES_TALL;
-export const GAME_START_FRAME_SPEED = 1000;
+export const GAME_START_FRAME_SPEED = 300;
+export const SNAKE_START_LENGTH = 5;

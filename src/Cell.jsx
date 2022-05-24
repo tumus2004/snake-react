@@ -7,8 +7,6 @@ const useStyles = makeStyles({
     position: "absolute",
     width: `${CELL_WIDTH}px`,
     height: `${CELL_HEIGHT}px`,
-    border: "1px solid white",
-    backgroundColor: "green",
   },
 });
 
